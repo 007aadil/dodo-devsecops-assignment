@@ -9,11 +9,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY app.py .
 
-RUN groupadd -g 1000 appuser && \
-    useradd -u 1000 -g 1000 -m -s /bin/bash appuser && \
-    chown -R 1000:1000 /app
+RUN addgroup -S appuser && \
+    adduser -S appuser -G appuser && \
+    chown -R appuser:appuser /app
 
-USER 1000
+USER appuser
 
 EXPOSE 8080
 
