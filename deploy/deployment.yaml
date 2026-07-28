@@ -33,6 +33,18 @@ spec:
                 - ALL
 
           env:
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: ledger-api-config
+                  key: APP_ENV
+
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: ledger-api-config
+                  key: LOG_LEVEL
+
             - name: STRIPE_API_KEY
               valueFrom:
                 secretKeyRef:
