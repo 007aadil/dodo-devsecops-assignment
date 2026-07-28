@@ -13,6 +13,7 @@ permissions:
   contents: read
   security-events: write
   packages: write
+  id-token: write
 
 jobs:
   security-scan:
@@ -53,7 +54,7 @@ jobs:
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
 
-      # Install Trivy CLI
+      # Install Trivy
       - name: Install Trivy
         run: |
           sudo apt-get update
@@ -92,7 +93,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build Docker Image
+      # Install Cosign
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: "v2.4.1"
+
+      # Build Local Docker Image
       - name: Build Docker Image
         run: |
           docker build -t ledger-api:scan ./app
@@ -106,7 +113,7 @@ jobs:
             --exit-code 1 \
             ledger-api:scan
 
-      # Push Image to GitHub Container Registry
+      # Build & Push Docker Image to GHCR
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
@@ -114,4 +121,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/ledger-api:latest
+            ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }}
+
+      # Sign Image with Cosign
+      - name: Sign Container Image
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign \
             ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }}
