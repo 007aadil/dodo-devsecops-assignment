@@ -11,9 +11,10 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   packages: write
+  security-events: write
   id-token: write
+  attestations: write
 
 jobs:
   security-scan:
@@ -113,8 +114,9 @@ jobs:
             --exit-code 1 \
             ledger-api:scan
 
-      # Build & Push Docker Image to GHCR
+      # Build and Push Docker Image
       - name: Build and Push Docker Image
+        id: build-push
         uses: docker/build-push-action@v6
         with:
           context: ./app
@@ -123,7 +125,15 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/ledger-api:latest
             ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }}
 
-      # Sign Image with Cosign
+      # Generate SLSA Build Attestation
+      - name: Generate Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/ledger-api
+          subject-digest: ${{ steps.build-push.outputs.digest }}
+          push-to-registry: true
+
+      # Sign Container Image with Cosign
       - name: Sign Container Image
         env:
           COSIGN_YES: "true"
