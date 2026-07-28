@@ -53,7 +53,7 @@ jobs:
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
 
-      # Install Trivy
+      # Install Trivy CLI
       - name: Install Trivy
         run: |
           sudo apt-get update
@@ -80,21 +80,11 @@ jobs:
             --exit-code 1 \
             .
 
-      # Extract Docker Metadata
-      - name: Extract Docker Metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/ledger-api
-          tags: |
-            type=latest
-            type=sha
-
       # Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Login to GHCR
+      # Login to GitHub Container Registry
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -102,7 +92,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build Docker Image (local)
+      # Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t ledger-api:scan ./app
@@ -116,7 +106,7 @@ jobs:
             --exit-code 1 \
             ledger-api:scan
 
-      # Build and Push to GHCR
+      # Push Image to GitHub Container Registry
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
