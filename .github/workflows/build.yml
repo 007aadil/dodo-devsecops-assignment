@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository
+      # Checkout source code
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -36,21 +36,23 @@ jobs:
           pip install -r app/requirements.txt
           pip install bandit semgrep
 
-      # Bandit SAST
+      # Bandit
       - name: Run Bandit
         run: |
           bandit -r app
 
-      # Semgrep SAST
+      # Semgrep
       - name: Run Semgrep
         run: |
           semgrep scan \
             --config=auto \
             app/
 
-      # Secret Scanning
+      # Gitleaks
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
 
       # Trivy Filesystem Scan
       - name: Run Trivy Filesystem Scan
@@ -60,10 +62,10 @@ jobs:
           scan-ref: .
           format: table
           severity: HIGH,CRITICAL
-          exit-code: 1
           ignore-unfixed: true
+          exit-code: 1
 
-      # Build Docker Image
+      # Build Docker image
       - name: Build Docker Image
         run: |
           docker build -t ledger-api:scan ./app
@@ -75,5 +77,5 @@ jobs:
           image-ref: ledger-api:scan
           format: table
           severity: HIGH,CRITICAL
-          exit-code: 1
           ignore-unfixed: true
+          exit-code: 1

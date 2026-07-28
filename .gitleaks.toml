@@ -1,0 +1,8 @@
+title = "Gitleaks Configuration"
+
+[allowlist]
+description = "Ignore encrypted SealedSecret manifests"
+
+paths = [
+  '''deploy/sealedsecret.yaml'''
+]
