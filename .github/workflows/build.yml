@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout source code
+      # Checkout repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -44,9 +44,7 @@ jobs:
       # Semgrep
       - name: Run Semgrep
         run: |
-          semgrep scan \
-            --config=auto \
-            app/
+          semgrep scan --config=auto app/
 
       # Gitleaks
       - name: Run Gitleaks
@@ -56,26 +54,26 @@ jobs:
 
       # Trivy Filesystem Scan
       - name: Run Trivy Filesystem Scan
-        uses: aquasecurity/trivy-action@v0.32.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: fs
           scan-ref: .
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: 1
+          exit-code: "1"
 
-      # Build Docker image
+      # Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t ledger-api:scan ./app
 
       # Trivy Image Scan
       - name: Run Trivy Image Scan
-        uses: aquasecurity/trivy-action@v0.32.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ledger-api:scan
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: 1
+          exit-code: "1"
