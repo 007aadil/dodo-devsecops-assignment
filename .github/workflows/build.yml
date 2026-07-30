@@ -18,9 +18,7 @@ permissions:
 
 jobs:
   security-scan:
-
     name: Security Scan
-
     runs-on: ubuntu-latest
 
     steps:
@@ -29,13 +27,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
       # Setup Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
 
       # Install Dependencies
       - name: Install Dependencies
@@ -44,27 +40,23 @@ jobs:
           pip install -r app/requirements.txt
           pip install bandit semgrep
 
-
-      # Bandit SAST Scan
+      # Bandit Scan
       - name: Run Bandit
         run: |
           bandit -r app
 
-
-      # Semgrep SAST Scan
+      # Semgrep Scan
       - name: Run Semgrep
         run: |
           semgrep scan \
-          --config=auto \
-          app/
+            --config=auto \
+            app/
 
-
-      # Gitleaks Secret Scan
+      # Gitleaks
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
-
 
       # Install Trivy
       - name: Install Trivy
@@ -84,23 +76,20 @@ jobs:
 
           trivy --version
 
-
       # Trivy Filesystem Scan
       - name: Run Trivy Filesystem Scan
         run: |
           trivy fs \
-          --severity HIGH,CRITICAL \
-          --ignore-unfixed \
-          --exit-code 1 \
-          .
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            .
 
-
-      # Docker Buildx
+      # Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-
-      # Login GHCR
+      # Login to GHCR
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -108,33 +97,45 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-
       # Install Cosign
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
         with:
           cosign-release: "v2.4.1"
 
-
-      # Build local image for scanning
+      # Build Docker Image
       - name: Build Docker Image
         run: |
           docker build \
-          -t ledger-api:scan \
-          ./app
+            --no-cache \
+            -t ledger-api:scan \
+            ./app
 
+      # Verify Installed Packages
+      - name: Show Installed Packages
+        run: |
+          docker run --rm ledger-api:scan pip freeze
 
-      # Trivy Container Image Scan
+      # Verify setuptools Version
+      - name: Show setuptools Version
+        run: |
+          docker run --rm ledger-api:scan python -c "import setuptools; print(setuptools.__version__)"
+
+      # Verify msgpack
+      - name: Check msgpack
+        run: |
+          docker run --rm ledger-api:scan pip show msgpack || true
+
+      # Trivy Image Scan (Debug)
       - name: Run Trivy Image Scan
         run: |
           trivy image \
-          --severity HIGH,CRITICAL \
-          --ignore-unfixed \
-          --exit-code 1 \
-          ledger-api:scan
+            --debug \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            ledger-api:scan
 
-
-      # Build and Push Image to GHCR
+      # Build and Push Image
       - name: Build and Push Docker Image
         id: build-push
         uses: docker/build-push-action@v6
@@ -145,8 +146,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/ledger-api:latest
             ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }}
 
-
-      # Generate SLSA Provenance
+      # Generate Provenance
       - name: Generate Build Provenance
         uses: actions/attest-build-provenance@v2
         with:
@@ -154,21 +154,18 @@ jobs:
           subject-digest: ${{ steps.build-push.outputs.digest }}
           push-to-registry: true
 
-
-      # Cosign Keyless Signing
+      # Cosign Sign
       - name: Sign Container Image
         env:
           COSIGN_EXPERIMENTAL: "true"
-
         run: |
           cosign sign --yes \
-          ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }}
 
-
-      # Verify Cosign Signature
+      # Verify Signature
       - name: Verify Container Signature
         run: |
           cosign verify \
-          ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }} \
-          --certificate-identity-regexp="https://github.com/${{ github.repository }}/.github/workflows/.*" \
-          --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+            ghcr.io/${{ github.repository_owner }}/ledger-api:${{ github.sha }} \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/.github/workflows/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
