@@ -1,31 +1,44 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: ledger-api
   namespace: payments
   labels:
     app: ledger-api
+
 spec:
   replicas: 3
+
   selector:
     matchLabels:
       app: ledger-api
+
   template:
     metadata:
       labels:
         app: ledger-api
+
     spec:
       serviceAccountName: ledger-api-sa
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
 
       containers:
         - name: ledger-api
           image: ledger-api:starter
           imagePullPolicy: IfNotPresent
 
+          ports:
+            - containerPort: 8080
+
           securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
@@ -56,9 +69,6 @@ spec:
                 secretKeyRef:
                   name: ledger-api-secret
                   key: DB_PASSWORD
-
-          ports:
-            - containerPort: 8080
 
           resources:
             requests:
